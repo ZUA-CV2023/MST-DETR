@@ -1,0 +1,23 @@
+# dataset path
+path: D:\ZZH\datasets\simd_dataset
+train: train.txt
+val: val.txt
+test: val.txt
+
+# class names
+names:
+   0: car
+   1: truck
+   2: van
+   3: long vehicle
+   4: bus
+   5: airliner
+   6: propeller aircraft
+   7: trainer aircraft
+   8: chartered aircraft
+   9: fighter aircraft
+   10: others
+   11: stair truck
+   12: pushback truck
+   13: helicopter
+   14: boat

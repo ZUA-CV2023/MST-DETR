@@ -1,0 +1,63 @@
+# Ultralytics YOLO 🚀, AGPL-3.0 license
+# RT-DETR-l object detection model with P3-P5 outputs. For details see https://docs.ultralytics.com/models/rtdetr
+
+# Parameters
+nc: 10  # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov8n-cls.yaml' will call yolov8-cls.yaml with scale 'n'
+  # [depth, width, max_channels]
+  l: [1.00, 1.00, 1024]
+
+# From BiliBili 魔鬼面具
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, ConvNormLayer, [32, 3, 2, None, False, 'relu']] # 0-P1/2
+  - [-1, 1, ConvNormLayer, [32, 3, 1, None, False, 'relu']] # 1
+  - [-1, 1, ConvNormLayer, [64, 3, 1, None, False, 'relu']] # 2
+  - [-1, 1, nn.MaxPool2d, [3, 2, 1]] # 3-P2/4
+
+  # [ch_out, block_type, block_nums, stage_num, act, variant]
+  - [-1, 1, Blocks, [64, BottleNeck, 1, 2, 'relu']] # 4  320
+  - [-1, 1, Blocks, [128, BottleNeck, 1, 3, 'relu']] # 5-P3/8  160
+  - [-1, 1, Blocks, [256, BottleNeck, 1, 4, 'relu']] # 6-P4/16  80
+  - [-1, 1, Blocks, [512, BottleNeck, 1, 5, 'relu']] # 7-P5/32  40
+  - [-1, 1, Blocks, [512, BottleNeck, 1, 6, 'relu']] # 8-P5/64  20
+
+#  # [ch_out, block_type, block_nums, stage_num, act, variant]
+#  - [-1, 1, Blocks, [64, BottleNeck, 3, 2, 'relu']] # 4
+#  - [-1, 1, Blocks, [128, BottleNeck, 4, 3, 'relu']] # 5-P3/8
+#  - [-1, 1, Blocks, [256, BottleNeck, 6, 4, 'relu']] # 6-P4/16
+#  - [-1, 1, Blocks, [512, BottleNeck, 3, 5, 'relu']] # 7-P5/32
+#  - [-1, 1, Blocks, [512, BottleNeck, 3, 6, 'relu']] # 8-P6/64
+head:
+  - [-1, 1, SAFM, [2048]]  #9 P5/32 20
+  - [-1, 1,AIFI,[1024, 8]]#10 20
+  - [-1, 1, EUCB, [256]] # 11  40
+  - [-1, 1, SAFM, [256]]  # 12 40
+
+  - [7, 1, SAFM, [2048]]  # 13 P4/16 40
+  - [[-2, -1], 1, Concat, [1]] # 14  40
+  - [-1, 1, EUCB, [256]] # 15  80
+  - [-1, 1, SAFM, [256]]  # 16 80
+
+  - [6, 1, SAFM, [1024]]  #17  80
+  - [[-2, -1], 1, Concat, [1]]  # 18 80
+  - [-1, 1, EUCB, [256]] # 19  160
+  - [-1, 1, SAFM, [256]]  # 20 160
+
+  - [5, 1, SAFM, [512]]  #21  160
+  - [[-2, -1], 1, Concat, [1]]  # 22 160
+  - [-1, 3, RepC3, [256,0.5]]    #23 160 x4
+
+  - [-1, 1, DynamicPartialDownsample, [256]]   # 24  80
+  - [[-1, 16], 1, Concat, [1]]  #25 80
+  - [-1, 3, RepC3, [256,0.5]]   #26 80 x3
+
+  - [-1, 1, DynamicPartialDownsample, [256]]   #27 40
+  - [[-1, 12], 1, Concat, [1]]  #28 40
+  - [-1, 3, RepC3, [256,0.5]]   #29 40 x2
+
+  - [-1, 1, DynamicPartialDownsample, [256]]   #30 20
+  - [[-1, 10], 1, Concat, [1]]  #31 20
+  - [-1, 3, RepC3, [256,0.5]]    #32 20  x1
+
+  - [[23, 26, 29, 32], 1, RTDETRDecoder, [nc, 256, 300, 4, 8, 3]]  # Detect(x1, x2, x3, x4)
